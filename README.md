@@ -46,7 +46,8 @@
 
 <details>
 <summary>示例响应</summary>
-```java
+
+```json
 {
   "general": {
     "uptimeSeconds": 5239,
@@ -111,7 +112,9 @@
 ### GET `/stats/general`
 返回最近收集的一般统计信息。
 
-示例响应：
+<details>
+<summary>示例响应</summary>
+
 ```json
 {
   "uptimeSeconds": 5239,
@@ -123,11 +126,14 @@
   }
 }
 ```
+</details>
 
 ### GET `/stats/cpu`
 返回最近收集的与 CPU 相关的统计信息。
 
-示例响应：
+<details>
+<summary>示例响应</summary>
+
 ```json
 {
   "perLogicalCpuLoadPercent": [
@@ -140,22 +146,28 @@
   "tempCelsius": 50.464
 }
 ```
+</details>
 
 ### GET `/stats/memory`
 返回最近收集的与内存相关的统计信息。
 
-示例响应：
+<details>
+<summary>示例响应</summary>
+
 ```json
 {
   "usedMb": 52,
   "totalMb": 969
 }
 ```
+</details>
 
 ### GET `/stats/filesystems`
 返回最近收集的与文件系统相关的统计信息。
 
-示例响应：
+<details>
+<summary>示例响应</summary>
+
 ```json
 [
   {
@@ -167,11 +179,14 @@
   }
 ]
 ```
+</details>
 
 ### GET `/stats/network`
 返回最近收集的与网络相关的统计信息。
 
-示例响应：
+<details>
+<summary>示例响应</summary>
+
 ```json
 {
   "interfaces": [
@@ -197,6 +212,7 @@
   }
 }
 ```
+</details>
 
 # 可能添加的功能
 * 启动时从磁盘加载保存的历史记录

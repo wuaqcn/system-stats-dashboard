@@ -46,7 +46,7 @@
 
 <details>
 <summary>示例响应</summary>
-```json
+```java
 {
   "general": {
     "uptimeSeconds": 5239,

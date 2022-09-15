@@ -1,50 +1,51 @@
 # system-stats-dashboard
-Provides a simple dashboard for viewing system stats, and an API for retrieving said stats programmatically.
+提供用于查看系统统计信息的简单仪表板，以及用于以编程方式检索所述统计信息的 API。
 
-There are 3 levels of stats: "current", "recent", and "persisted". Current and recent stats are all kept in memory, and persisted stats are saved to disk. The recent stats are a subset of the persisted stats.
+有 3 个级别的统计信息：“当前”、“最近”和“持久”。当前和最近的统计信息都保存在内存中，持久化的统计信息保存到磁盘。最近的统计数据是持久统计数据的子集。
 
-By default:
-* Current stats are updated every 3 seconds.
-* Every minute, the last minute of current stats are consolidated and added as a single entry to the list of recent and persisted stats.
-* 180 entries (3 hours) are kept in the recent list, and 2 megabytes (~2000 entries, ~33 hours) are kept in the persisted list.
-* Persisted stats are stored in `./stats_history`.
+默认：
+* 当前统计数据每 3 秒更新一次。
+* 每分钟，当前统计数据的最后一分钟都会合并并作为单个条目添加到最近和持久统计数据列表中。
+* 180 个条目（3 小时）保存在最近列表中，2 MB（~2000 个条目，~33 小时）保存在持久列表中。
+* 持久化的统计信息存储在 `./stats_history` 中。
 
-# Running
-* Download the release for your platform from the [releases page](https://github.com/rotoclone/system-stats-dashboard/releases) and unzip it to a directory you like.
-* Run the `system-stats-dashboard` executable.
-* Go to `localhost:8001/dashboard` and take a gander at some stats.
+# 运行
+* 从以下位置下载适用于您平台的版本 [发布页面](https://github.com/wuaqcn/system-stats-dashboard/releases) 并将其解压缩到您喜欢的目录。
+* 运行可执行文件 `system-stats-dashboard`。
+* 打开 `localhost:8001/dashboard` 查看统计数据。
 
-# Configuration
-Configuration options are located in `Rocket.toml`.
-|Name|Default value|Description|
+# 配置
+配置选项位于 `Rocket.toml`。
+|配置名|默认值|描述|
 |----|-------------|-----------|
-|address|`"0.0.0.0"`|The address to run the server on|
-|port|`8001`|The port to run the server on|
-|recent_history_size|`180`|The number of entries to keep in recent history|
-|consolidation_limit|`20`|The number of entries to collect before consolidating them and writing an entry to recent and persisted stats|
-|update_frequency_seconds|`3`|The number of seconds to wait between each stats collection|
-|persist_history|`true`|Whether to persist stats to disk or not. If set to `false`, all the config options below are ignored.|
-|history_files_directory|`"./stats_history"`|The directory to persist stats to|
-|history_files_max_size_bytes|`2_000_000`|The maximum size, in bytes, to allow `history_files_directory` to grow to|
+|address|`"0.0.0.0"`|运行服务器的地址|
+|port|`8001`|运行服务器的端口|
+|recent_history_size|`180`|最近历史记录中要保留的条目数|
+|consolidation_limit|`20`|在合并它们并将条目写入最近和持久的统计信息之前要收集的条目数|
+|update_frequency_seconds|`3`|每个统计信息收集之间等待的秒数|
+|persist_history|`true`|是否将统计信息保存到磁盘。如果设置为 `false`，则忽略下面的所有配置选项|
+|history_files_directory|`"./stats_history"`|将统计信息保存到的目录|
+|history_files_max_size_bytes|`2_000_000`|允许`history_files_directory`增长到的最大大小（以字节为单位）|
 
-# Endpoints
+# 接口
 
-## Dashboard
+## 仪表板
 
 ### `/dashboard`
-Displays current stats, as well as graphs of some recent stats. Defaults to dark mode; add `?dark=false` for light mode.
+显示当前统计信息，以及一些最近统计信息的图表。默认为暗模式；为浅色模式添加 `?dark=false`。
 
 ![dark_dashboard](https://user-images.githubusercontent.com/48834501/111235475-b7458880-85be-11eb-90a0-0c5d3de4d49b.png)
 
 ### `/dashboard/history`
-Same as `/dashboard`, except for persisted stats.
+与 `/dashboard` 相同，包含持久化统计信息。
 
 ## API
 
 ### GET `/stats`
-Returns all the most recently collected stats.
+返回所有最近收集的统计信息。
 
-Example response:
+<details>
+<summary>示例响应</summary>
 ```json
 {
   "general": {
@@ -105,11 +106,12 @@ Example response:
   "collectionTime": "2021-03-15T18:50:07.721739139-05:00"
 }
 ```
+</details>
 
 ### GET `/stats/general`
-Returns the most recently collected general stats.
+返回最近收集的一般统计信息。
 
-Example response:
+示例响应：
 ```json
 {
   "uptimeSeconds": 5239,
@@ -123,9 +125,9 @@ Example response:
 ```
 
 ### GET `/stats/cpu`
-Returns the most recently collected stats related to the CPU.
+返回最近收集的与 CPU 相关的统计信息。
 
-Example response:
+示例响应：
 ```json
 {
   "perLogicalCpuLoadPercent": [
@@ -140,9 +142,9 @@ Example response:
 ```
 
 ### GET `/stats/memory`
-Returns the most recently collected stats related to memory.
+返回最近收集的与内存相关的统计信息。
 
-Example response:
+示例响应：
 ```json
 {
   "usedMb": 52,
@@ -151,9 +153,9 @@ Example response:
 ```
 
 ### GET `/stats/filesystems`
-Returns the most recently collected stats related to filesystems.
+返回最近收集的与文件系统相关的统计信息。
 
-Example response:
+示例响应：
 ```json
 [
   {
@@ -167,9 +169,9 @@ Example response:
 ```
 
 ### GET `/stats/network`
-Returns the most recently collected stats related to the network.
+返回最近收集的与网络相关的统计信息。
 
-Example response:
+示例响应：
 ```json
 {
   "interfaces": [
@@ -196,11 +198,11 @@ Example response:
 }
 ```
 
-# Possible features to add
-* Load saved history from disk on startup
-* Send emails if certain stats are above/below certain values for a certain amount of time
+# 可能添加的功能
+* 启动时从磁盘加载保存的历史记录
+* 如果某些统计数据在一定时间内高于/低于某些值，则发送电子邮件
 
-## Building for Raspberry Pi from Windows
-1. Get linker from https://gnutoolchains.com/raspberry/
-1. Add target: `rustup target add armv7-unknown-linux-gnueabihf`
-1. Build: `cargo build --release --target=armv7-unknown-linux-gnueabihf`
+## 从 Windows 构建 Raspberry Pi
+1. 从 https://gnutoolchains.com/raspberry/ 获取链接器
+2. 添加 target: `rustup target add armv7-unknown-linux-gnueabihf`
+3. 构建: `cargo build --release --target=armv7-unknown-linux-gnueabihf`

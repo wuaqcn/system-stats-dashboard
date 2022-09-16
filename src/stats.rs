@@ -83,7 +83,7 @@ impl GeneralStats {
         };
 
         let boot_timestamp = match sys.boot_time() {
-            Ok(boot_time) => Some(boot_time.timestamp()),
+            Ok(boot_time) => Some(boot_time.unix_timestamp()),
             Err(e) => {
                 log("Error getting boot time: ", e);
                 None

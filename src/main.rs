@@ -1,9 +1,8 @@
-//! Provides a simple dashboard for viewing system stats, and an API for retrieving said stats programmatically.
-
 use std::num::NonZeroUsize;
 
 use rocket::serde::json::Json;
 use rocket::{figment::Figment, http::Status, Rocket, State};
+use rocket::response::Redirect;
 use rocket_dyn_templates::Template;
 use serde::Deserialize;
 use systemstat::{Duration, Platform, System};
@@ -42,9 +41,9 @@ const HISTORY_FILES_DIRECTORY_CONFIG_KEY: &str = "history_files_directory";
 const DEFAULT_HISTORY_FILES_DIRECTORY: &str = "./stats_history";
 
 const HISTORY_FILES_DIRECTORY_MAX_SIZE_CONFIG_KEY: &str = "history_files_max_size_bytes";
-const DEFAULT_HISTORY_FILES_DIRECTORY_MAX_SIZE_BYTES: u64 = 2_000_000;
+const DEFAULT_HISTORY_FILES_DIRECTORY_MAX_SIZE_BYTES: u64 = 2_000_000; // 2MB
 
-/// Endpoint to get all the system stats.
+/// 获取最新的系统统计信息
 #[get("/stats")]
 fn get_all_stats(stats_history: &State<UpdatingStatsHistory>) -> Result<Json<AllStats>, Status> {
     match stats_history
@@ -58,7 +57,7 @@ fn get_all_stats(stats_history: &State<UpdatingStatsHistory>) -> Result<Json<All
     }
 }
 
-/// Endpoint to get general stats.
+/// 获取一般统计信息
 #[get("/stats/general")]
 fn get_general_stats(
     stats_history: &State<UpdatingStatsHistory>,
@@ -74,7 +73,7 @@ fn get_general_stats(
     }
 }
 
-/// Endpoint to get CPU stats.
+/// 获取 CPU 统计信息
 #[get("/stats/cpu")]
 fn get_cpu_stats(stats_history: &State<UpdatingStatsHistory>) -> Result<Json<CpuStats>, Status> {
     match stats_history
@@ -88,7 +87,7 @@ fn get_cpu_stats(stats_history: &State<UpdatingStatsHistory>) -> Result<Json<Cpu
     }
 }
 
-/// Endpoint to get memory stats.
+/// 获取内存统计信息
 #[get("/stats/memory")]
 fn get_memory_stats() -> Result<Json<MemoryStats>, Status> {
     match MemoryStats::from(&System::new()) {
@@ -97,7 +96,7 @@ fn get_memory_stats() -> Result<Json<MemoryStats>, Status> {
     }
 }
 
-/// Endpoint to get filesystem stats.
+/// 获取文件系统统计信息
 #[get("/stats/filesystems")]
 fn get_filesystem_stats() -> Result<Json<Vec<MountStats>>, Status> {
     match MountStats::from(&System::new()) {
@@ -106,13 +105,19 @@ fn get_filesystem_stats() -> Result<Json<Vec<MountStats>>, Status> {
     }
 }
 
-/// Endpoint to get network stats.
+/// 获取网络统计信息
 #[get("/stats/network")]
 fn get_network_stats() -> Json<NetworkStats> {
     Json(NetworkStats::from(&System::new()))
 }
 
-/// Endpoint to view the dashboard.
+/// 首页 - 转发到查看仪表板
+#[get("/")]
+fn index() -> Redirect {
+    Redirect::to(rocket::uri!(dashboard(Some(true))))
+}
+
+/// 查看仪表板
 #[get("/dashboard?<dark>")]
 fn dashboard(stats_history: &State<UpdatingStatsHistory>, dark: Option<bool>) -> Template {
     let context = DashboardContext::from_history(
@@ -122,7 +127,7 @@ fn dashboard(stats_history: &State<UpdatingStatsHistory>, dark: Option<bool>) ->
     Template::render("dashboard", &context)
 }
 
-/// Endpoint to view a dashboard of persisted stats.
+/// 用于查看持久统计信息仪表板（历史信息）
 #[get("/dashboard/history?<dark>")]
 fn history_dashboard(
     history_persistence_config: &State<HistoryPersistenceConfig>,
@@ -156,13 +161,14 @@ fn rocket() -> Rocket<rocket::Build> {
     let mut rocket = rocket::build()
         .mount(
             "/",
-            routes![
+            rocket::routes![
                 get_all_stats,
                 get_general_stats,
                 get_cpu_stats,
                 get_memory_stats,
                 get_filesystem_stats,
                 get_network_stats,
+                index,
                 dashboard,
                 history_dashboard,
             ],
@@ -227,18 +233,18 @@ fn rocket() -> Rocket<rocket::Build> {
     rocket
 }
 
-/// Gets a value from the provided configuration, returning `default` if it's not found.
+/// 从提供的配置中获取一个值，如果未找到，则返回默认值。
 fn get_config_value<'a, T>(config: &Figment, key: &str, default: T) -> T
 where
     T: Deserialize<'a> + std::fmt::Debug,
 {
     match config.extract_inner(key) {
         Ok(x) => {
-            println!("Using configured value {:?} for {}", x, key);
+            println!("为 {} 使用配置值 {:?}", key, x);
             x
         }
         Err(e) => {
-            println!("Using default value {:?} for {} ({})", default, key, e);
+            println!("为 {} 使用默认值 {:?} ({})", key, default, e);
             default
         }
     }

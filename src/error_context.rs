@@ -1,12 +1,12 @@
-//! Context for the error template.
+//! 错误模板的上下文。
 
 use serde::Serialize;
 
-/// Context for the error template.
+/// 错误模板的上下文。
 #[derive(Serialize)]
 pub struct ErrorContext {
-    /// The title of the page.
+    /// 页面的标题。
     pub title: String,
-    /// The error message.
+    /// 错误消息。
     pub message: String,
 }

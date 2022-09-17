@@ -1,4 +1,4 @@
-//! A history of stats.
+//! 统计历史
 
 use systemstat::System;
 use thread::JoinHandle;
@@ -21,38 +21,38 @@ use std::{
 const CURRENT_HISTORY_FILE_NAME: &str = "current_stats.txt";
 const OLD_HISTORY_FILE_NAME: &str = "old_stats.txt";
 
-/// Stats history that updates itself periodically.
+/// 定期更新统计历史记录
 pub struct UpdatingStatsHistory {
-    /// The thread that handles updating the stats.
+    /// 处理更新统计信息的线程
     _update_thread: JoinHandle<()>,
-    /// The stats history.
+    /// 统计历史
     pub stats_history: Arc<Mutex<StatsHistory>>,
 }
 
-/// Configuration for stats history persistence.
+/// 统计历史持久化的配置
 #[derive(Clone)]
 pub enum HistoryPersistenceConfig {
-    /// Persistence is disabled.
+    /// 禁用持久化
     Disabled,
-    /// Persistence is enabled.
+    /// 启用持久化
     Enabled {
-        /// The base directory to save the stats history to.
+        /// 将统计历史记录保存到的目录
         dir: PathBuf,
-        /// The maximum size to allow the saved stats history directory to grow to, in bytes.
+        /// 允许保存的统计历史目录增长到的最大大小，以字节为单位
         size_limit: u64,
     },
 }
 
 impl UpdatingStatsHistory {
-    /// Creates an `UpdatingStatsHistory`.
+    /// 创建一个`UpdatingStatsHistory`。
     ///
-    /// # Arguments
-    /// * `system` - The system to gather stats from.
-    /// * `cpu_sample_duration` - The amount of time to take to sample CPU load. Must be less than `update_frequency`.
-    /// * `update_frequency` - How often new stats should be gathered. Must be greater than `cpu_sample_duration`.
-    /// * `history_size` - The maximum number of entries to keep in the history.
-    /// * `consolidation_limit` - The number of times to gather stats before consolidating them and adding them to the history.
-    /// * `persistence_config` - Configuration for persisting history to disk.
+    /// # 参数
+    /// * `system` - 待收集统计信息的系统。
+    /// * `cpu_sample_duration` - 采样 CPU 负载所需的时间。必须小于`update_frequency`。
+    /// * `update_frequency` - 应该多久收集一次新的统计数据。必须大于 `cpu_sample_duration`。
+    /// * `history_size` - 保留在历史记录中的最大条目数。
+    /// * `consolidation_limit` - 在合并统计数据并将其添加到历史记录之前收集统计数据的次数。
+    /// * `persistence_config` - 将历史记录保存到磁盘的配置。
     pub fn new(
         system: System,
         cpu_sample_duration: Duration,
@@ -74,7 +74,7 @@ impl UpdatingStatsHistory {
                 if let HistoryPersistenceConfig::Enabled { dir, size_limit } = &persistence_config {
                     if let Err(e) = persist_stats(&consolidated_stats, dir, *size_limit) {
                         //TODO use actual logging once https://github.com/SergioBenitez/Rocket/issues/21 is done
-                        println!("Error persisting stats to {:?}: {}", dir, e);
+                        println!("将统计信息持久保存到 {:?}: {}", dir, e);
                     }
                 }
 
@@ -99,12 +99,16 @@ impl UpdatingStatsHistory {
     }
 }
 
+/// 合并所有统计数据
+///
+/// # 参数
+/// * `stats_list` - 待合并的统计数据列表
 fn consolidate_all_stats(mut stats_list: Vec<AllStats>) -> AllStats {
     if stats_list.is_empty() {
-        panic!("stats_list must not be empty")
+        panic!("stats_list 不能为空")
     }
 
-    // deal with stats we need to calculate averages for first
+    // 首先处理需要计算平均值的统计数据
     let mut average_one_min_load_average = 0.0;
     let mut average_five_min_load_average = 0.0;
     let mut average_fifteen_min_load_average = 0.0;
@@ -123,6 +127,7 @@ fn consolidate_all_stats(mut stats_list: Vec<AllStats>) -> AllStats {
     let mut average_udp6_used = 0.0;
 
     for (i, all_stats) in stats_list.iter().enumerate() {
+        // 更新平均负载
         if let Some(load_averages) = &all_stats.general.load_averages {
             average_one_min_load_average =
                 average_one_min_load_average.updated_average(load_averages.one_minute, i + 1);
@@ -132,19 +137,23 @@ fn consolidate_all_stats(mut stats_list: Vec<AllStats>) -> AllStats {
                 .updated_average(load_averages.fifteen_minutes, i + 1);
         }
 
+        // 更新每个CPU的平均负载
         if let Some(loads) = &all_stats.cpu.per_logical_cpu_load_percent {
             average_per_logical_cpu_loads.update_averages(loads, i + 1);
         }
 
+        // 更新CPU整体负载
         if let Some(aggregate) = &all_stats.cpu.aggregate_load_percent {
             average_aggregate_cpu_load =
                 average_aggregate_cpu_load.updated_average(*aggregate, i + 1);
         }
 
+        // 更新每个CPU的平均温度
         if let Some(temp) = &all_stats.cpu.temp_celsius {
             average_temp = average_temp.updated_average(*temp, i + 1);
         }
 
+        // 更新内存使用情况
         if let Some(memory_stats) = &all_stats.memory {
             average_mem_used = average_mem_used.updated_average(memory_stats.used_mb as f32, i + 1);
             if memory_stats.total_mb > max_total_mem {
@@ -152,6 +161,7 @@ fn consolidate_all_stats(mut stats_list: Vec<AllStats>) -> AllStats {
             }
         }
 
+        // 更新网络使用信息
         if let Some(socket_stats) = &all_stats.network.sockets {
             average_tcp_used =
                 average_tcp_used.updated_average(socket_stats.tcp_in_use as f32, i + 1);
@@ -166,7 +176,8 @@ fn consolidate_all_stats(mut stats_list: Vec<AllStats>) -> AllStats {
         }
     }
 
-    let last_stats = stats_list.pop().unwrap(); // this should never panic because we won't get to here if stats_list is empty
+    // 更新系统信息
+    let last_stats = stats_list.pop().unwrap(); // 这不应该panic，因为如果 stats_list 为空，我们将无法到达这里
     let general = GeneralStats {
         uptime_seconds: last_stats.general.uptime_seconds,
         boot_timestamp: last_stats.general.boot_timestamp,
@@ -177,8 +188,10 @@ fn consolidate_all_stats(mut stats_list: Vec<AllStats>) -> AllStats {
         }),
     };
 
+    // 更新文件系统信息
     let filesystems = last_stats.filesystems;
 
+    // 更新网络接口信息
     let network = NetworkStats {
         interfaces: last_stats.network.interfaces,
         sockets: Some(SocketStats {
@@ -209,6 +222,12 @@ fn consolidate_all_stats(mut stats_list: Vec<AllStats>) -> AllStats {
     }
 }
 
+/// 持久化统计数据
+///
+/// # 参数
+/// * `stats` - 统计信息。
+/// * `dir` - 要保存到的目录。
+/// * `dir_size_limit_bytes` - 文件大小限制，以比特为单位。
 fn persist_stats(stats: &AllStats, dir: &Path, dir_size_limit_bytes: u64) -> io::Result<()> {
     if !dir.exists() {
         create_dir_all(dir)?;
@@ -217,7 +236,7 @@ fn persist_stats(stats: &AllStats, dir: &Path, dir_size_limit_bytes: u64) -> io:
     let current_stats_path = dir.join(CURRENT_HISTORY_FILE_NAME);
     let old_stats_path = dir.join(OLD_HISTORY_FILE_NAME);
 
-    // divide size limit by 2 since this swaps between 2 files
+    // 将大小限制除以 2，因为这会在 2 个文件之间交换
     if current_stats_path.exists()
         && current_stats_path.metadata()?.len() >= (dir_size_limit_bytes / 2)
     {
@@ -234,13 +253,13 @@ fn persist_stats(stats: &AllStats, dir: &Path, dir_size_limit_bytes: u64) -> io:
 }
 
 trait MovingAverage<T> {
-    /// Updates the average to take into account a new value.
+    /// 加入新值来更新平均值。
     ///
-    /// # Arguments
-    /// * `new_value` - The new value to add to the average.
-    /// * `n` - The number of values in the dataset (including the new one).
+    /// # 参数
+    /// * `new_value` - 添加到平均值的新值。
+    /// * `n` - 数据集中值的数量（包括新值）。
     ///
-    /// Returns the updated average.
+    /// 返回更新的平均值。
     fn updated_average(self, new_value: T, n: usize) -> T;
 }
 
@@ -251,11 +270,11 @@ impl MovingAverage<f32> for f32 {
 }
 
 trait MovingAverageCollection<T> {
-    /// Updates the averages to take into account a new set of values.
+    /// 使用一组新值来更新平均值。
     ///
-    /// # Arguments
-    /// * `new_values` - The new values to add to the averages. If larger than `self`, `self` will be padded with zeroes to match its size.
-    /// * `n` - The number of sets of values in the dataset (including the new ones).
+    /// # 参数
+    /// * `new_values` - 添加到平均值的新值。如果大于 `self`，`self` 将用零填充以匹配其大小。
+    /// * `n` - 数据集中值集的数量（包括新值）。
     fn update_averages(&mut self, new_values: &[T], n: usize);
 }
 
@@ -271,21 +290,21 @@ impl MovingAverageCollection<f32> for Vec<f32> {
     }
 }
 
-/// A rolling history of system stats. As new stats are added, the oldest stats will be replaced if the history is full.
+/// 系统统计数据的滚动历史。随着新统计数据的添加，如果历史记录已满，最旧的统计数据将被替换。
 pub struct StatsHistory {
-    /// The maximum size of the stats list.
+    /// 统计信息列表的最大大小
     max_size: NonZeroUsize,
-    /// The list of stats.
+    /// 统计数据列表
     stats: Vec<AllStats>,
-    /// The index of the most recently added stats.
+    /// 最近添加的统计信息的索引
     most_recent_index: usize,
 }
 
 impl StatsHistory {
-    /// Creates a `StatsHistory`.
+    /// 创建一个 `StatsHistory`。
     ///
-    /// # Arguments
-    /// * `max_size` - The maximum number of entries to hold in this history.
+    /// # 参数
+    /// * `max_size` - 此历史记录中要保存的最大条目数。
     pub fn new(max_size: NonZeroUsize) -> StatsHistory {
         StatsHistory {
             max_size,
@@ -294,10 +313,10 @@ impl StatsHistory {
         }
     }
 
-    /// Loads stats history from the provided directory.
+    /// 从提供的目录加载统计历史记录。
     ///
-    /// # Arguments
-    /// * `dir` - The directory to find persisted stats history files in.
+    /// # 参数
+    /// * `dir` - 在其中查找持久统计历史文件的目录。
     pub fn load_from(dir: &Path) -> io::Result<StatsHistory> {
         let mut stats = Vec::new();
 
@@ -317,26 +336,26 @@ impl StatsHistory {
         }
     }
 
-    /// Adds stats to the history.
+    /// 将统计数据添加到历史记录。
     ///
-    /// # Arguments
-    /// * `new_stats` - The stats to add.
+    /// # 参数
+    /// * `new_stats` - 要添加的统计信息。
     fn push(&mut self, new_stats: AllStats) {
         if self.stats.len() == self.max_size.get() {
-            // The list is full, so we need to replace an existing entry
+            // 列表已满，因此我们需要替换现有条目
             self.most_recent_index = self.get_next_index();
             self.update_most_recent_stats(new_stats);
         } else {
-            // The list isn't full yet, so we can just add a new entry to the end
+            // 列表还没有满，所以我们可以在末尾添加一个新条目
             self.stats.push(new_stats);
             self.most_recent_index = self.stats.len() - 1;
         }
     }
 
-    /// Replaces the most recently added stats with the provided stats.
+    /// 用提供的统计信息替换最近添加的统计信息。
     ///
-    /// # Arguments
-    /// * `new_stats` - The stats to replace the most recent stats with.
+    /// # 参数
+    /// * `new_stats` - 用于替换最新统计信息的统计信息。
     fn update_most_recent_stats(&mut self, new_stats: AllStats) {
         if self.stats.is_empty() {
             self.push(new_stats);
@@ -345,7 +364,7 @@ impl StatsHistory {
         }
     }
 
-    /// Gets the most recently added stats from the history. Returns `None` if the history is empty.
+    /// 从历史记录中获取最近添加的统计信息。如果历史记录为空，则返回“None”。
     pub fn get_most_recent_stats(&self) -> Option<&AllStats> {
         if self.stats.is_empty() {
             None
@@ -359,7 +378,7 @@ impl StatsHistory {
     }
 }
 
-/// Adds stats from the file at the provided path (if it exists) to the provided list of stats
+/// 从提供的路径（如果存在）的文件中添加统计信息到提供的统计信息列表
 fn add_stats_from_file(path: PathBuf, stats: &mut Vec<AllStats>) -> io::Result<()> {
     if path.exists() {
         let file = File::open(path)?;
@@ -376,7 +395,7 @@ fn add_stats_from_file(path: PathBuf, stats: &mut Vec<AllStats>) -> io::Result<(
     Ok(())
 }
 
-/// Finds the index after the provided index, looping around if the maximum index is reached.
+/// 在提供的索引之后查找索引，如果达到最大索引则循环。
 fn index_after(i: usize, max_size: NonZeroUsize) -> usize {
     (i + 1) % max_size.get()
 }
@@ -387,10 +406,10 @@ impl<'a> IntoIterator for &'a StatsHistory {
 
     fn into_iter(self) -> Self::IntoIter {
         let starting_index = if self.stats.len() == self.max_size.get() {
-            // The array is full, so the oldest stats are in the next index. (Since it wraps around)
+            // 数组已满，因此最旧的统计信息位于下一个索引中。（因为它循环）
             self.get_next_index()
         } else {
-            // The array is not full, so the oldest stats are at the beginning of the array.
+            // 数组未满，因此最旧的统计信息位于数组的开头。
             0
         };
 

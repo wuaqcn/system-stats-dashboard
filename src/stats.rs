@@ -1,4 +1,4 @@
-//! A collection of system stats.
+//! 系统统计信息的集合
 
 use std::{io::Error, thread};
 
@@ -9,32 +9,33 @@ use systemstat::{
     saturating_sub_bytes, ByteSize, Duration, IpAddr, NetworkAddrs, Platform, System,
 };
 
+// 每MB的字节数
 const BYTES_PER_MB: u64 = 1_000_000;
 
-/// All system stats
+/// 所有系统统计信息
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AllStats {
-    /// General system stats
+    /// 一般系统统计
     pub general: GeneralStats,
-    /// CPU stats
+    /// CPU统计
     pub cpu: CpuStats,
-    /// Memory stats
+    /// 内存统计
     pub memory: Option<MemoryStats>,
-    /// Stats for each mounted filesystem
+    /// 每个已挂载文件系统的统计信息
     pub filesystems: Option<Vec<MountStats>>,
-    /// Network stats
+    /// 网络统计
     pub network: NetworkStats,
-    /// The time at which the stats were collected
+    /// 收集统计数据的时间
     pub collection_time: DateTime<Local>,
 }
 
 impl AllStats {
-    /// Gets all stats for the provided system.
+    /// 获取所提供系统的所有统计信息。
     ///
-    /// # Arguments
-    /// * `sys` - The system to get stats from.
-    /// * `cpu_sample_duration` - The amount of time to take to sample CPU load. Note that this function will block the thread it's in for this duration before returning.
+    /// # 参数
+    /// * `sys` - 指定需要获取信息的系统
+    /// * `cpu_sample_duration` - 采样 CPU 负载所需的时间。请注意，此函数将在返回之前在此期间阻塞它所在的线程。
     pub fn from(sys: &System, cpu_sample_duration: Duration) -> AllStats {
         AllStats {
             general: GeneralStats::from(&sys),
@@ -47,37 +48,37 @@ impl AllStats {
     }
 }
 
-/// General system stats
+/// 一般系统统计
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GeneralStats {
-    /// Number of seconds the system has been running
+    /// 系统运行的秒数
     pub uptime_seconds: Option<u64>,
-    /// Boot time in seconds since the UNIX epoch
+    /// 自 UNIX 纪元以来的启动时间（以秒为单位）
     pub boot_timestamp: Option<i64>,
-    /// Load average values for the system
+    /// 系统的平均负载
     pub load_averages: Option<LoadAverages>,
 }
 
-/// Load average values
+/// 平均负载
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LoadAverages {
-    /// Load average over the last minute
+    /// 最近1分钟的平均负载
     pub one_minute: f32,
-    /// Load average over the last 5 minutes
+    /// 最近5分钟的平均负载
     pub five_minutes: f32,
-    /// Load average over the last 15 minutes
+    /// 最近15分钟的平均负载
     pub fifteen_minutes: f32,
 }
 
 impl GeneralStats {
-    /// Gets general stats for the provided system.
+    /// 获取所提供系统的一般统计信息。
     pub fn from(sys: &System) -> GeneralStats {
         let uptime_seconds = match sys.uptime() {
             Ok(x) => Some(x.as_secs()),
             Err(e) => {
-                log("Error getting uptime: ", e);
+                log("获取系统运行时间时出错: ", e);
                 None
             }
         };
@@ -85,7 +86,7 @@ impl GeneralStats {
         let boot_timestamp = match sys.boot_time() {
             Ok(boot_time) => Some(boot_time.unix_timestamp()),
             Err(e) => {
-                log("Error getting boot time: ", e);
+                log("获取启动时间时出错: ", e);
                 None
             }
         };
@@ -97,7 +98,7 @@ impl GeneralStats {
                 fifteen_minutes: x.fifteen,
             }),
             Err(e) => {
-                log("Error getting load average: ", e);
+                log("获取平均负载时出错: ", e);
                 None
             }
         };
@@ -110,24 +111,24 @@ impl GeneralStats {
     }
 }
 
-/// CPU stats
+/// CPU统计
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CpuStats {
-    /// Load percentages for each logical CPU
+    /// 每个逻辑 CPU 的负载百分比
     pub per_logical_cpu_load_percent: Option<Vec<f32>>,
-    /// Load percentage of the CPU as a whole
+    /// CPU整体负载百分比
     pub aggregate_load_percent: Option<f32>,
-    /// Temperature of the CPU in degrees Celsius
+    /// CPU 的温度，以摄氏度为单位
     pub temp_celsius: Option<f32>,
 }
 
 impl CpuStats {
-    /// Gets CPU stats for the provided system.
+    /// 获取所提供系统的 CPU 统计信息。
     ///
-    /// # Arguments
-    /// * `sys` - The system to get stats from.
-    /// * `sample_duration` - The amount of time to take to sample CPU load. Note that this function will block the thread it's in for this duration before returning.
+    /// # 参数
+    /// * `sys` - 指定需要获取信息的系统
+    /// * `sample_duration` - 采样 CPU 负载所需的时间。请注意，此函数将在返回之前在此期间阻塞它所在的线程。
     pub fn from(sys: &System, sample_duration: Duration) -> CpuStats {
         let cpu_load = sys.cpu_load();
         let cpu_load_aggregate = sys.cpu_load_aggregate();
@@ -136,12 +137,12 @@ impl CpuStats {
             Ok(x) => match x.done() {
                 Ok(cpus) => Some(cpus.iter().map(|cpu| (1.0 - cpu.idle) * 100.0).collect()),
                 Err(e) => {
-                    log("Error getting per logical CPU load: ", e);
+                    log("获取每个逻辑 CPU 负载时​​出错: ", e);
                     None
                 }
             },
             Err(e) => {
-                log("Error getting per logical CPU load: ", e);
+                log("获取每个逻辑 CPU 负载时​​出错: ", e);
                 None
             }
         };
@@ -150,12 +151,12 @@ impl CpuStats {
             Ok(x) => match x.done() {
                 Ok(cpu) => Some((1.0 - cpu.idle) * 100.0),
                 Err(e) => {
-                    log("Error getting aggregate CPU load: ", e);
+                    log("获取总 CPU 负载时​​出错: ", e);
                     None
                 }
             },
             Err(e) => {
-                log("Error getting aggregate CPU load: ", e);
+                log("获取总 CPU 负载时​​出错: ", e);
                 None
             }
         };
@@ -163,7 +164,7 @@ impl CpuStats {
         let temp_celsius = match sys.cpu_temp() {
             Ok(x) => Some(x),
             Err(e) => {
-                log("Error getting CPU temperature: ", e);
+                log("获取 CPU 温度时出错: ", e);
                 None
             }
         };
@@ -176,18 +177,18 @@ impl CpuStats {
     }
 }
 
-/// Memory stats
+/// 内存统计
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MemoryStats {
-    /// Megabytes of memory used
+    /// 使用的内存，以MB为单位
     pub used_mb: u64,
-    /// Megabytes of memory total
+    /// 总内存兆字节，以MB为单位
     pub total_mb: u64,
 }
 
 impl MemoryStats {
-    /// Gets memory stats for the provided system. Returns `None` if an error occurs.
+    /// 获取所提供系统的内存统计信息。如果发生错误，则返回“None”。
     pub fn from(sys: &System) -> Option<MemoryStats> {
         match sys.memory() {
             Ok(mem) => {
@@ -205,24 +206,24 @@ impl MemoryStats {
     }
 }
 
-/// Stats for a mounted filesystem
+/// 已挂载文件系统的统计信息
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MountStats {
-    /// Type of filesystem (NTFS, ext3, etc.)
+    /// 文件系统类型（NTFS、ext3 等）
     pub fs_type: String,
-    /// Name of the device corresponding to this mount
+    /// 此挂载对应的设备名称
     pub mounted_from: String,
-    /// Root path corresponding to this mount
+    /// 此挂载对应的根路径
     pub mounted_on: String,
-    /// Space of this mount used in megabytes
+    /// 此挂载使用的空间（以兆字节为单位）
     pub used_mb: u64,
-    /// Total space for this mount in megabytes
+    /// 此挂载的总空间（以 MB 为单位）
     pub total_mb: u64,
 }
 
 impl MountStats {
-    /// Gets a list of mount stats for the provided system. Only mounts with more than 0 bytes of total space are included. Returns `None` if an error occurs.
+    /// 获取所提供系统的挂载统计信息列表。仅包含总空间超过 0 字节的挂载。如果发生错误，则返回“None”。
     pub fn from(sys: &System) -> Option<Vec<MountStats>> {
         match sys.mounts() {
             Ok(mounts) => Some(
@@ -245,25 +246,25 @@ impl MountStats {
                     .collect(),
             ),
             Err(e) => {
-                log("Error getting mounts: ", e);
+                log("获取挂载信息时出错: ", e);
                 None
             }
         }
     }
 }
 
-/// Network stats
+/// 网络统计
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkStats {
-    /// Stats for network interfaces
+    /// 网络接口的统计信息
     pub interfaces: Option<Vec<NetworkInterfaceStats>>,
-    /// Stats for sockets
+    /// 套接字的统计信息
     pub sockets: Option<SocketStats>,
 }
 
 impl NetworkStats {
-    /// Gets network stats for the provided system.
+    /// 获取所提供系统的网络统计信息。
     pub fn from(sys: &System) -> NetworkStats {
         NetworkStats {
             interfaces: NetworkInterfaceStats::from(sys),
@@ -272,30 +273,30 @@ impl NetworkStats {
     }
 }
 
-/// Stats for a network interface
+/// 网络接口的统计信息
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkInterfaceStats {
-    /// The name of the interface
+    /// 接口名称
     pub name: String,
-    /// IP addresses associated with this interface
+    /// 与此接口关联的 IP 地址
     pub addresses: Vec<String>,
-    /// Total megabytes sent via this interface
+    /// 通过此接口发送的总兆字节
     pub sent_mb: u64,
-    /// Total megabytes received via this interface
+    /// 通过此接口接收的总兆字节
     pub received_mb: u64,
-    /// Total packets sent via this interface
+    /// 通过此接口发送的数据包总数
     pub sent_packets: u64,
-    /// Total packets received via this interface
+    /// 通过此接口接收的数据包总数
     pub received_packets: u64,
-    /// Total number of errors that occured while sending data via this interface
+    /// 通过该接口发送数据时发生的错误总数
     pub send_errors: u64,
-    /// Total number of errors that occured while receiving data via this interface
+    /// 通过该接口接收数据时发生的错误总数
     pub receive_errors: u64,
 }
 
 impl NetworkInterfaceStats {
-    /// Gets a list of network interface stats for the provided system. Returns `None` if an error occurs.
+    /// 获取所提供系统的网络接口统计信息列表。如果发生错误，则返回“None”。
     pub fn from(sys: &System) -> Option<Vec<NetworkInterfaceStats>> {
         match sys.networks() {
             Ok(interfaces) => Some(
@@ -321,7 +322,7 @@ impl NetworkInterfaceStats {
                         }
                         Err(e) => {
                             log(
-                                &format!("Error getting stats for interface {}: ", interface.name),
+                                &format!("获取接口统计信息时出错 {}: ", interface.name),
                                 e,
                             );
                             None
@@ -330,31 +331,31 @@ impl NetworkInterfaceStats {
                     .collect(),
             ),
             Err(e) => {
-                log("Error getting network interfaces: ", e);
+                log("获取接口统计信息时出错: ", e);
                 None
             }
         }
     }
 }
 
-/// Stats for sockets
+/// 套接字的统计信息
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SocketStats {
-    /// Number of TCP sockets in use
+    /// 正在使用的 TCP 套接字数
     pub tcp_in_use: usize,
-    /// Number of orphaned TCP sockets
+    /// 孤立 TCP 套接字的数量
     pub tcp_orphaned: usize,
-    /// Number of UDP sockets in use
+    /// 正在使用的 UDP 套接字数
     pub udp_in_use: usize,
-    /// Number of IPv6 TCP sockets in use
+    /// 正在使用的 IPv6 TCP 套接字数
     pub tcp6_in_use: usize,
-    /// Number of IPv6 UDP sockets in use
+    /// 正在使用的 IPv6 UDP 套接字数
     pub udp6_in_use: usize,
 }
 
 impl SocketStats {
-    /// Gets socket stats for the provided system. Returns `None` if an error occurs.
+    /// 获取所提供系统的套接字统计信息。如果发生错误，则返回“None”。
     pub fn from(sys: &System) -> Option<SocketStats> {
         match sys.socket_stats() {
             Ok(stats) => Some(SocketStats {
@@ -365,14 +366,14 @@ impl SocketStats {
                 udp6_in_use: stats.udp6_sockets_in_use,
             }),
             Err(e) => {
-                log("Error getting socket stats: ", e);
+                log("获取套接字统计信息时出错: ", e);
                 None
             }
         }
     }
 }
 
-/// Logs an error message. If the error is for a stat that isn't supported, logs at debug level. Otherwise logs at error level.
+/// 记录错误消息。如果错误是针对不受支持的统计信息，以调试级别记录。否则以错误级别记录。
 fn log(message: &str, e: Error) {
     if e.to_string() == "Not supported" {
         debug!("{}{}", message, e);
@@ -381,12 +382,12 @@ fn log(message: &str, e: Error) {
     }
 }
 
-/// Gets the number of megabytes represented by the provided `ByteSize`.
+/// 获取由提供的 `ByteSize` 表示的兆字节数。
 fn bytes_to_mb(byte_size: ByteSize) -> u64 {
     byte_size.as_u64() / BYTES_PER_MB
 }
 
-/// Gets the string representation of a `NetworkAddrs`. Returns `None` if the address is anything other than IPv4 or IPv6.
+/// 获取 `NetworkAddrs` 的字符串表示形式。如果地址不是 IPv4 或 IPv6，则返回“None”。
 fn address_to_string(address: NetworkAddrs) -> Option<String> {
     match address.addr {
         IpAddr::V4(x) => Some(x.to_string()),

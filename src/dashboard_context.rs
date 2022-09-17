@@ -1,4 +1,4 @@
-//! Context for the dashboard template.
+//! 仪表板模板的上下文。
 
 use chrono::{DateTime, Local, NaiveDateTime, SecondsFormat, Utc};
 use serde::Serialize;
@@ -41,7 +41,7 @@ const LOAD_AVERAGE_5_FILL_COLOR: &str = "#bb00ff99"; // purple
 const LOAD_AVERAGE_15_LINE_COLOR: &str = "#7700ff"; // dark purple
 const LOAD_AVERAGE_15_FILL_COLOR: &str = "#7700ff99"; // dark purple
 
-/// Context for the dashboard template.
+/// 仪表板模板的上下文。
 #[derive(Serialize)]
 pub struct DashboardContext {
     title: String,
@@ -51,74 +51,74 @@ pub struct DashboardContext {
     last_update_time: String,
 }
 
-/// Context for a single chart in a dashboard.
+/// 仪表板中单个图表的上下文。
 #[derive(Serialize)]
 struct ChartContext {
-    /// The id of this chart. Must be unique.
+    /// 此图表的 ID。必须是独一无二的。
     id: String,
-    /// The title of this chart.
+    /// 此图表的标题。
     title: String,
-    /// The datasets displayed on this chart.
+    /// 此图表上显示的数据集。
     datasets: Vec<DatasetContext>,
-    /// The label for the X axis.
+    /// X 轴的标签。
     x_label: String,
-    /// The label for the Y axis.
+    /// Y 轴的标签。
     y_label: String,
-    /// Names of the markers on the X axis.
+    /// X 轴上标记的名称。
     x_values: Vec<String>,
-    /// The lowest possible Y value expected for this chart.
+    /// 此图表预期的最低 Y 值。
     min_y: f32,
-    /// The highest possible Y value expected for this chart.
+    /// 此图表预期的最高可能 Y 值。
     max_y: f32,
-    /// First line of text to diplay beside the chart.
+    /// 要在图表旁边显示的第一行文本。
     accompanying_text_1: String,
-    /// Second line of text to diplay beside the chart.
+    /// 在图表旁边显示的第二行文本。
     accompanying_text_2: String,
 }
 
-/// Context for a single dataset in a chart.
+/// 图表中单个数据集的上下文。
 #[derive(Serialize)]
 struct DatasetContext {
-    /// The name of this dataset.
+    /// 此数据集的名称。
     name: String,
-    /// Color code used for the line.
+    /// 用于线条的颜色代码。
     line_color_code: String,
-    /// Color code used for the area under the line. Only relevant if `fill` is `true`.
+    /// 用于线下区域的颜色代码。仅当 `fill` 为 `true` 时才相关。
     fill_color_code: String,
-    /// The values in this dataset.
+    /// 此数据集中的值。
     values: Vec<f32>,
-    /// Whether to fill the area under the line.
+    /// 是否填充线下区域。
     fill: bool,
 }
 
-/// Context for a section of a dashboard.
+/// 仪表板部分的上下文。
 #[derive(Serialize)]
 struct DashboardSectionContext {
-    /// The name of the section.
+    /// 名称
     name: String,
-    /// The stats in the section.
+    /// 统计数据
     stats: Vec<String>,
-    /// The subsections of this section.
+    /// 小节
     subsections: Vec<DashboardSubsectionContext>,
 }
 
-/// Context for a subsection of a dashboard.
+/// 仪表板子部分的上下文
 #[derive(Serialize)]
 struct DashboardSubsectionContext {
-    /// The name of the subsection.
+    /// 名称
     name: String,
-    /// The stats in the subsection.
+    /// 统计数据
     stats: Vec<String>,
 }
 
 impl DashboardContext {
-    /// Builds a `DashboardContext` from the provided stats history.
+    /// 从提供的统计历史记录中构建一个 `DashboardContext`。
     ///
-    /// # Arguments
-    /// * `stats_history` - The stats history to use to populate the context.
-    /// * `dark_mode` - Whether dark mode is enabled or not.
+    /// # 参数
+    /// * `stats_history` - 用于填充上下文的统计历史记录。
+    /// * `dark_mode` - 是否启用暗模式。
     pub fn from_history(stats_history: &StatsHistory, dark_mode: bool) -> DashboardContext {
-        let title = "Dashboard".to_string();
+        let title = "仪表盘".to_string();
 
         let mut sections = Vec::new();
         let most_recent_stats = match stats_history.get_most_recent_stats() {
@@ -129,7 +129,7 @@ impl DashboardContext {
                     dark_mode,
                     charts: Vec::new(),
                     sections: vec![DashboardSectionContext {
-                        name: "No stats yet".to_string(),
+                        name: "暂无数据".to_string(),
                         stats: Vec::new(),
                         subsections: Vec::new(),
                     }],
@@ -166,15 +166,19 @@ impl DashboardContext {
     }
 }
 
+/// 创建一般小节
+///
+/// # 参数
+/// * `stats` - 系统信息
 fn build_general_section(stats: &GeneralStats) -> Option<DashboardSectionContext> {
     let mut stat_strings = Vec::new();
     if let Some(x) = stats.uptime_seconds {
-        stat_strings.push(format!("Uptime: {} seconds", x))
+        stat_strings.push(format!("正常运行时间: {} 秒", x))
     };
     if let Some(x) = stats.boot_timestamp {
         let parsed_time = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(x, 0), Utc);
         stat_strings.push(format!(
-            "Boot time: {}",
+            "开机时间: {}",
             parsed_time.with_timezone(&Local).to_rfc3339()
         ))
     }
@@ -183,13 +187,17 @@ fn build_general_section(stats: &GeneralStats) -> Option<DashboardSectionContext
         None
     } else {
         Some(DashboardSectionContext {
-            name: "General".to_string(),
+            name: "系统信息".to_string(),
             stats: stat_strings,
             subsections: Vec::new(),
         })
     }
 }
 
+/// 创建网络小节
+///
+/// # 参数
+/// * `network_stats` - 网络统计信息
 fn build_network_section(network_stats: &NetworkStats) -> Option<DashboardSectionContext> {
     let mut subsections = Vec::new();
     match &network_stats.sockets {
@@ -244,6 +252,10 @@ fn build_network_section(network_stats: &NetworkStats) -> Option<DashboardSectio
     }
 }
 
+/// 创建文件系统小节
+///
+/// # 参数
+/// * `mount_stats` - 文件系统信息
 fn build_filesystems_section(mount_stats: &[MountStats]) -> DashboardSectionContext {
     let mut total_used_mb = 0;
     let mut total_total_mb = 0;
@@ -255,10 +267,10 @@ fn build_filesystems_section(mount_stats: &[MountStats]) -> DashboardSectionCont
         subsections.push(DashboardSubsectionContext {
             name: mount.mounted_on.clone(),
             stats: vec![
-                format!("Type: {}", mount.fs_type),
-                format!("Mounted from: {}", mount.mounted_from),
+                format!("类型: {}", mount.fs_type),
+                format!("挂载点: {}", mount.mounted_from),
                 format!(
-                    "Used: {} / {} MB ({:.2}%)",
+                    "使用量: {} / {} MB ({:.2}%)",
                     mount.used_mb, mount.total_mb, used_pct
                 ),
             ],
@@ -267,15 +279,19 @@ fn build_filesystems_section(mount_stats: &[MountStats]) -> DashboardSectionCont
 
     let total_used_pct = ((total_used_mb as f64) / (total_total_mb as f64)) * 100.0;
     DashboardSectionContext {
-        name: "Filesystems".to_string(),
+        name: "文件系统".to_string(),
         stats: vec![format!(
-            "Total used: {} / {} MB ({:.2}%)",
+            "总使用量: {} / {} MB ({:.2}%)",
             total_used_mb, total_total_mb, total_used_pct
         )],
         subsections,
     }
 }
 
+/// 创建CPU图表
+///
+/// # 参数
+/// * `stats_history` - 历史统计信息
 fn build_cpu_charts(stats_history: &StatsHistory, dark_mode: bool) -> Vec<ChartContext> {
     let mut charts = Vec::new();
     let mut cpu_datasets = Vec::new();
@@ -300,14 +316,14 @@ fn build_cpu_charts(stats_history: &StatsHistory, dark_mode: bool) -> Vec<ChartC
     let usage_accompanying_text = format!("{:.2}%", aggregate_values.last().unwrap_or(&0.0));
 
     cpu_datasets.push(DatasetContext {
-        name: "Aggregate".to_string(),
+        name: "总计".to_string(),
         line_color_code: CPU_AGGREGATE_LINE_COLOR.to_string(),
         fill_color_code: CPU_AGGREGATE_FILL_COLOR.to_string(),
         values: aggregate_values,
         fill: true,
     });
 
-    // TODO there's gotta be a better way to do this
+    // TODO 必须有更好的方法来做到这一点
     let num_logical_cpus = match per_logical_cpu_values.first() {
         Some(x) => x.len(),
         None => 0,
@@ -339,10 +355,10 @@ fn build_cpu_charts(stats_history: &StatsHistory, dark_mode: bool) -> Vec<ChartC
 
     charts.push(ChartContext {
         id: "cpu-usage-chart".to_string(),
-        title: "CPU Usage".to_string(),
+        title: "CPU使用率".to_string(),
         datasets: cpu_datasets,
-        x_label: "Time".to_string(),
-        y_label: "Usage (%)".to_string(),
+        x_label: "时间".to_string(),
+        y_label: "使用率 (%)".to_string(),
         x_values: x_values.clone(),
         min_y: 0.0,
         max_y: 100.0,
@@ -353,16 +369,16 @@ fn build_cpu_charts(stats_history: &StatsHistory, dark_mode: bool) -> Vec<ChartC
     let temp_accompanying_text = format!("{:.2}°C", temp_values.last().unwrap_or(&0.0));
     charts.push(ChartContext {
         id: "cpu-temp-chart".to_string(),
-        title: "Temperature".to_string(),
+        title: "温度".to_string(),
         datasets: vec![DatasetContext {
-            name: "Celsius".to_string(),
+            name: "摄氏度".to_string(),
             line_color_code: TEMPERATURE_LINE_COLOR.to_string(),
             fill_color_code: TEMPERATURE_FILL_COLOR.to_string(),
             values: temp_values,
             fill: true,
         }],
-        x_label: "Time".to_string(),
-        y_label: "Temperature (C)".to_string(),
+        x_label: "时间".to_string(),
+        y_label: "温度 (C)".to_string(),
         x_values,
         min_y: 0.0,
         max_y: 85.0,
@@ -373,6 +389,10 @@ fn build_cpu_charts(stats_history: &StatsHistory, dark_mode: bool) -> Vec<ChartC
     charts
 }
 
+/// 创建存储图表
+///
+/// # 参数
+/// * `stats_history` - 历史统计信息
 fn build_memory_chart(stats_history: &StatsHistory) -> ChartContext {
     let mut memory_values = Vec::new();
     let mut memory_total_mb = 0;
@@ -408,16 +428,16 @@ fn build_memory_chart(stats_history: &StatsHistory) -> ChartContext {
 
     ChartContext {
         id: "ram-chart".to_string(),
-        title: "Memory Usage".to_string(),
+        title: "内存使用量".to_string(),
         datasets: vec![DatasetContext {
-            name: "MB Used".to_string(),
+            name: "已用内存".to_string(),
             line_color_code: MEM_LINE_COLOR.to_string(),
             fill_color_code: MEM_FILL_COLOR.to_string(),
             values: memory_values,
             fill: true,
         }],
-        x_label: "Time".to_string(),
-        y_label: "Usage (MB)".to_string(),
+        x_label: "时间".to_string(),
+        y_label: "使用量 (MB)".to_string(),
         x_values,
         min_y: 0.0,
         max_y: memory_total_mb as f32,
@@ -426,6 +446,10 @@ fn build_memory_chart(stats_history: &StatsHistory) -> ChartContext {
     }
 }
 
+/// 创建负载图表
+///
+/// # 参数
+/// * `stats_history` - 历史统计信息
 fn build_load_average_chart(stats_history: &StatsHistory) -> ChartContext {
     let mut one_min_values = Vec::new();
     let mut five_min_values = Vec::new();
@@ -456,21 +480,21 @@ fn build_load_average_chart(stats_history: &StatsHistory) -> ChartContext {
     );
     let datasets = vec![
         DatasetContext {
-            name: "1 minute".to_string(),
+            name: "1 分钟".to_string(),
             line_color_code: LOAD_AVERAGE_1_LINE_COLOR.to_string(),
             fill_color_code: LOAD_AVERAGE_1_FILL_COLOR.to_string(),
             values: one_min_values,
             fill: false,
         },
         DatasetContext {
-            name: "5 minutes".to_string(),
+            name: "5 分钟".to_string(),
             line_color_code: LOAD_AVERAGE_5_LINE_COLOR.to_string(),
             fill_color_code: LOAD_AVERAGE_5_FILL_COLOR.to_string(),
             values: five_min_values,
             fill: false,
         },
         DatasetContext {
-            name: "15 minutes".to_string(),
+            name: "15 分钟".to_string(),
             line_color_code: LOAD_AVERAGE_15_LINE_COLOR.to_string(),
             fill_color_code: LOAD_AVERAGE_15_FILL_COLOR.to_string(),
             values: fifteen_min_values,
@@ -480,10 +504,10 @@ fn build_load_average_chart(stats_history: &StatsHistory) -> ChartContext {
 
     ChartContext {
         id: "load-average-chart".to_string(),
-        title: "Load Averages".to_string(),
+        title: "平均负载".to_string(),
         datasets,
-        x_label: "Time".to_string(),
-        y_label: "Load average".to_string(),
+        x_label: "时间".to_string(),
+        y_label: "平均负载".to_string(),
         x_values,
         min_y: 0.0,
         max_y: 0.0,
@@ -492,6 +516,10 @@ fn build_load_average_chart(stats_history: &StatsHistory) -> ChartContext {
     }
 }
 
+/// 创建网络图表
+///
+/// # 参数
+/// * `stats_history` - 历史统计信息
 fn build_network_charts(stats_history: &StatsHistory) -> Vec<ChartContext> {
     let mut sent_mb_values = Vec::new();
     let mut received_mb_values = Vec::new();
@@ -550,14 +578,14 @@ fn build_network_charts(stats_history: &StatsHistory) -> Vec<ChartContext> {
     );
     let usage_datasets = vec![
         DatasetContext {
-            name: "Sent".to_string(),
+            name: "发送".to_string(),
             line_color_code: SENT_LINE_COLOR.to_string(),
             fill_color_code: SENT_FILL_COLOR.to_string(),
             values: sent_mb_values,
             fill: false,
         },
         DatasetContext {
-            name: "Received".to_string(),
+            name: "接收".to_string(),
             line_color_code: RECEIVED_LINE_COLOR.to_string(),
             fill_color_code: RECEIVED_FILL_COLOR.to_string(),
             values: received_mb_values,
@@ -567,10 +595,10 @@ fn build_network_charts(stats_history: &StatsHistory) -> Vec<ChartContext> {
 
     charts.push(ChartContext {
         id: "network-usage-chart".to_string(),
-        title: "Cumulative Network Usage".to_string(),
+        title: "累积网络使用量".to_string(),
         datasets: usage_datasets,
-        x_label: "Time".to_string(),
-        y_label: "Total (MB)".to_string(),
+        x_label: "时间".to_string(),
+        y_label: "总计 (MB)".to_string(),
         x_values: x_values.clone(),
         min_y: 0.0,
         max_y: 0.0,
@@ -579,13 +607,13 @@ fn build_network_charts(stats_history: &StatsHistory) -> Vec<ChartContext> {
     });
 
     let errors_accompanying_text = format!(
-        "{} send, {} receive",
+        "{} 已发送, {} 已接收",
         send_errors_values.last().unwrap_or(&0.0),
         receive_errors_values.last().unwrap_or(&0.0)
     );
     let errors_datasets = vec![
         DatasetContext {
-            name: "Send".to_string(),
+            name: "发送".to_string(),
             line_color_code: SEND_ERRORS_LINE_COLOR.to_string(),
             fill_color_code: SEND_ERRORS_FILL_COLOR.to_string(),
             values: send_errors_values,
@@ -602,10 +630,10 @@ fn build_network_charts(stats_history: &StatsHistory) -> Vec<ChartContext> {
 
     charts.push(ChartContext {
         id: "network-errors-chart".to_string(),
-        title: "Cumulative Network Errors".to_string(),
+        title: "累积网络错误".to_string(),
         datasets: errors_datasets,
-        x_label: "Time".to_string(),
-        y_label: "Total errors".to_string(),
+        x_label: "时间".to_string(),
+        y_label: "总错误".to_string(),
         x_values: x_values.clone(),
         min_y: 0.0,
         max_y: 0.0,
@@ -637,10 +665,10 @@ fn build_network_charts(stats_history: &StatsHistory) -> Vec<ChartContext> {
 
     charts.push(ChartContext {
         id: "sockets-chart".to_string(),
-        title: "Socket Usage".to_string(),
+        title: "套接字使用量".to_string(),
         datasets: sockets_datasets,
-        x_label: "Time".to_string(),
-        y_label: "Sockets".to_string(),
+        x_label: "时间".to_string(),
+        y_label: "使用量".to_string(),
         x_values,
         min_y: 0.0,
         max_y: 0.0,
@@ -651,6 +679,10 @@ fn build_network_charts(stats_history: &StatsHistory) -> Vec<ChartContext> {
     charts
 }
 
+/// 格式化时间
+///
+/// # 参数
+/// * `time` - 本地时间
 fn format_time(time: DateTime<Local>) -> String {
     time.format("%I:%M:%S %p").to_string()
 }
